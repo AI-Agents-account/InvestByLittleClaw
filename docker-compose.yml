@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend-app
+      dockerfile: Dockerfile
+    container_name: invest-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ui:
+    build:
+      context: ./ui-app
+      dockerfile: Dockerfile
+    container_name: invest-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:15-alpine
+    container_name: invest-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-invest}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invest_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-invest}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-invest}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: invest-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
